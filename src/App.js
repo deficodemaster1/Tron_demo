@@ -2,13 +2,14 @@
 
 import { useCallback,useState,useMemo,useEffect } from 'react';
 
-import { TronLinkAdapter,WalletConnectAdapter,LedgerAdapter } from '@tronweb3/tronwallet-adapters';
+import { TronLinkAdapter,WalletConnectAdapter,LedgerAdapter,BitKeepAdapter, OkxWalletAdapter, TokenPocketAdapter, } from '@tronweb3/tronwallet-adapters';
 import { WalletModalProvider, WalletActionButton,WalletConnectButton,WalletSelectButton,Button } from '@tronweb3/tronwallet-adapter-react-ui';
 import { WalletProvider, useWallet } from '@tronweb3/tronwallet-adapter-react-hooks';
 import abi from './trc20.json'
 function SignDemo() {
     const { signMessage, signTransaction, address } = useWallet();
     const [message, setMessage] = useState('hello');
+    const [amount, setAmount] = useState(100000000);
     const [signedMessage, setSignedMessage] = useState('');
     const [TrxBalance, setTrxBalance] = useState('-');
     const [TokenBalance, setTokenBalance] = useState('-');
@@ -34,12 +35,16 @@ function SignDemo() {
 
     // trc20 代币转账操作  send方法
     async function sendToken()  {
-        //当前连接的钱包地址获取 window.tronWeb.defaultAddress.base58
-        const receiver = 'TACAJTXR6k4SaSoYTejPEwFW1zkMXLWCVe';
-        const USDT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
-        const contract = await window.tronWeb.contract(abi, USDT_ADDRESS);
-        const txID = await contract.transfer(receiver, 100000000).send();
-        // result is big number
+        try {
+          //当前连接的钱包地址获取 window.tronWeb.defaultAddress.base58
+          const receiver = 'TACAJTXR6k4SaSoYTejPEwFW1zkMXLWCVe';
+          const USDT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
+          const contract = await window.tronWeb.contract(abi, USDT_ADDRESS);
+          const txID = await contract.transfer(receiver, amount).send();
+          // result is big number
+        } catch (error){
+          console.log(error)
+        }
     }
 
     // 钱包签名
@@ -50,10 +55,14 @@ function SignDemo() {
 
     // 转账操作
     async function onSignTransaction() {
+      try {
         const transaction = await window.tronWeb.transactionBuilder.sendTrx(receiver, window.tronWeb.toSun(0.001), address);
         const signedTransaction = await signTransaction(transaction);
         // const signedTransaction = await tronWeb.trx.sign(transaction);
-         await window.tronWeb.trx.sendRawTransaction(signedTransaction);
+        await window.tronWeb.trx.sendRawTransaction(signedTransaction);
+      } catch (error){
+        console.log(error)
+      }
     }
 
     return (
@@ -81,7 +90,7 @@ function SignDemo() {
             <Button onClick={getTokenBalance}>Get USDT Balance</Button>
 
             <h2>合约交互 Send</h2>
-            <p>transfer trx20 token usdt</p>
+            <p>transfer <input placeholder='transfer amount' onChange={e => {setAmount(e.target.value* 1000000)}} type="text"/> trx20 token usdt</p>
             <Button onClick={sendToken}>Send USDT</Button>
 
         </div>
@@ -119,7 +128,10 @@ function App() {
         const ledger = new LedgerAdapter({
             accountNumber: 2,
         });
-        return [tronLinkAdapter,walletConnectAdapter, ledger];
+        const bitKeepAdapter = new BitKeepAdapter();
+        const tokenPocketAdapter = new TokenPocketAdapter();
+        const okxwalletAdapter = new OkxWalletAdapter();
+        return [tronLinkAdapter,walletConnectAdapter, ledger,bitKeepAdapter,tokenPocketAdapter,okxwalletAdapter];
     }, []);
 
     const onError = useCallback((e) => {
